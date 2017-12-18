@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>wasm</title>
+</head>
+<body>
+<script>
+
+var rust_memory;
+
+fetch('target/wasm32-unknown-unknown/release/wasmmem.wasm')
+  .then(response => response.arrayBuffer())
+
+  .then(bytes => WebAssembly.instantiate(bytes, {
+    env: {
+      draw: function(data_ptr, counter) {
+        console.log("Called draw with counter: ", counter);
+        console.log("Called draw with ptr:", data_ptr);
+
+        for(var i = 0; i < 5; i++) {
+          console.log("data[", i, "]:", rust_memory[data_ptr + i]);
+        }
+      }
+    }
+  }))
+
+  .then(results => {
+    rust_memory = new Uint8Array(results.instance.exports.memory.buffer);
+    var gamestate_ptr = results.instance.exports.start();
+    console.log("Gamestate pointer:", gamestate_ptr);
+
+    results.instance.exports.update(gamestate_ptr);
+
+    function update() {
+      //window.requestAnimationFrame(update);
+      results.instance.exports.update(gamestate_ptr);
+    }
+    update();
+    window.requestAnimationFrame(update);
+
+  });
+
+</script>
+</body>
+</html>
